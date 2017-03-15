@@ -20,11 +20,11 @@
 
 ### 支持列表
 
-| 网站     |  模拟登录    |   功能列表   |
-| ---- | ---- | ---- |
-|   github.com   |  ✓    |    star \ unstar  |
-|   bilibili.com   |  ✓    |    -  |
-|   coding.net   |  ✓    |    -  |
+| 网站           | 模拟登录 | 验证码识别 | 功能列表          |
+| ------------ | ---- | ----- | ------------- |
+| github.com   | ✓    | -     | star \ unstar |
+| bilibili.com | ✓    | ×     | -             |
+| coding.net   | ✓    | -     | -             |
 
 ### PR说明
 * 新网站的PR需保证登录和cookies登录功能完成
