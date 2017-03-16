@@ -13,7 +13,8 @@ import rsa
 import binascii
 import json
 from bs4 import BeautifulSoup
-
+from PIL import Image
+import io
 headers = {
 	'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36',
 	'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -24,7 +25,7 @@ class Client():
 		self.session = requests.Session()
 		self.session.headers = headers
 		self.root_path = os.path.dirname(os.path.realpath(sys.argv[0]))
-		self.user_name = None
+		self.user_name = ""
 
 	def post(self, url, data):
 		response = self.session.post(url, data=data)
@@ -73,28 +74,40 @@ class Client():
 
 	# 普通登录
 	def login(self, username, password):
+		#访问登陆页面
+		response = self.get('https://passport.bilibili.com/login')
+		#请求验证码图片
+		response = self.get('https://passport.bilibili.com/captcha')
+		#显示验证码
+		value = response.content
+		image = Image.open(io.BytesIO(value))
+		image.show()
+		captcha_code = input("请输入图片上的验证码：")
 		#密码加密
 		password = self._encrypt(password)
 		preload = {
+			'act': 'login',
+			'gourl': '',
+			'keeptime': '2592000',
 			'userid': username,
 			'pwd': password,
-			'captcha':"",
-			'keep':1
+			'vdcode':captcha_code
 		}
-		response = self.post('https://passport.bilibili.com/ajax/miniLogin/login', data=preload)
-		data = json.loads(response.content.decode('utf-8'))
+		response = self.session.post('https://passport.bilibili.com/login/dologin', data=preload)
 		try:
-			data = data['status']
-			if data == False:
-				raise
+			#解析返回的html，判断登陆成功与否
+			soup = BeautifulSoup(response.text, "html.parser")
+			center = soup.find('center').find('div')
+			info = list(center.strings)[0]
+			info = info.strip()
+			print("login fail", info)
+			return False
+		except Exception as e:
+			#登陆成功
 			cookies_file = os.path.join(self.root_path, username + ".cookies")
 			self.save_cookies(cookies_file)
 			print('login success')
 			return True
-		except Exception as e:
-			#登陆失败
-			print('login fail')
-			return False
 			
 	#使用cookies登陆
 	def cookies_login(self, username):
