@@ -20,9 +20,12 @@ headers = {
 
 class Client():
 	def __init__(self):
+		self._clear()
+		self.root_path = os.path.dirname(os.path.realpath(sys.argv[0]))
+
+	def _clear(self):
 		self.session = requests.Session()
 		self.session.headers = headers
-		self.root_path = os.path.dirname(os.path.realpath(sys.argv[0]))
 		self.user_name = None
 		self.points_left = 0
 
@@ -62,6 +65,7 @@ class Client():
 
 	# 普通登录
 	def login(self, username, password):
+		self._clear()
 		response = self.get('https://coding.net/api/captcha/login')
 		password = hashlib.sha1(password.encode('utf-8')).hexdigest()
 		preload = {
@@ -88,6 +92,7 @@ class Client():
 			
 	#使用cookies登陆
 	def cookies_login(self, username):
+		self._clear()
 		cookies_file = os.path.join(self.root_path, username + ".cookies")
 		if not os.path.exists(cookies_file):
 			print("cookies login fail: " + username + '.cookies not exists.')
