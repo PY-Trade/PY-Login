@@ -59,12 +59,12 @@ def main():
 			if login(user):
 				client.star(repo_url)
 
-	elif FUNCTIONS[selectKey] == FUNCTIONS["STAR"]:
+	elif FUNCTIONS[selectKey] == FUNCTIONS["UNSTAR"]:
 		print("please enter your repo address,such as 'https://github.com/yourname/yourreponame'")
 		repo_url = input().strip()
 		for user in config:
 			if login(user):
-				client.star(repo_url)
+				client.unstar(repo_url)
 	
 
 def login(userdata):
