@@ -12,7 +12,7 @@ if not sys.version_info[0] == 3:
 import api
 import json
 import collections
-
+import random
 client = api.Client()
 
 FUNCTIONS = collections.OrderedDict()
@@ -29,6 +29,8 @@ def main():
 		sys.exit()
 	finally:
 		f.close()
+
+	random.shuffle(config)
 	
 	# 选择功能
 	print("-------------please enter function-----------")

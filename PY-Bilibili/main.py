@@ -12,6 +12,7 @@ if not sys.version_info[0] == 3:
 import api
 import json
 import collections
+import random
 
 client = api.Client()
 
@@ -26,6 +27,8 @@ def main():
 	finally:
 		f.close()
 
+	random.shuffle(config)
+	
 	# 暂无扩展功能，只有登录
 	for user in config:
 		if login(user):
