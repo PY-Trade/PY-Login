@@ -140,3 +140,33 @@ class Client():
 		else:
 			print(repo_url, "unstar fail")
 			return False
+
+	# follow
+	def follow(self, user):
+		token = self._getTokenAndId("https://github.com/" + user)[0]
+		preload = {
+			'utf8': '✓',
+			'authenticity_token': token
+		}
+		response = self.post('https://github.com/users/follow?target=' + user, data=preload)
+		if response.status_code == 200 and len(response.history) > 0:
+			print(user, "follow success")
+			return True
+		else:
+			print(user, "follow fail")
+			return False
+
+	# unfollow
+	def unfollow(self, user):
+		token = self._getTokenAndId("https://github.com/" + user)[0]
+		preload = {
+			'utf8': '✓',
+			'authenticity_token': token
+		}
+		response = self.post('https://github.com/users/unfollow?target=' + user, data=preload)
+		if response.status_code == 200 and len(response.history) > 0:
+			print(user, "unfollow success")
+			return True
+		else:
+			print(user, "unfollow fail")
+			return False

@@ -18,7 +18,8 @@ client = api.Client()
 FUNCTIONS = collections.OrderedDict()
 FUNCTIONS["STAR"] = "auto star"
 FUNCTIONS["UNSTAR"] = "auto unstar"
-
+FUNCTIONS["FOLLOW"] = "follow"
+FUNCTIONS["UNFOLLOW"] = "unfollow"
 def main():
 	config_path = os.path.join(client.root_path, 'config.json')
 	try:
@@ -65,6 +66,20 @@ def main():
 		for user in config:
 			if login(user):
 				client.unstar(repo_url)
+
+	elif FUNCTIONS[selectKey] == FUNCTIONS["FOLLOW"]:
+		print("please enter a username, if the url is 'https://github.com/xxxxx', the username is xxxxx")
+		username = input().strip()
+		for user in config:
+			if login(user):
+				client.follow(username)
+
+	elif FUNCTIONS[selectKey] == FUNCTIONS["UNFOLLOW"]:
+		print("please enter a username, if the url is 'https://github.com/xxxxx', the username is xxxxx")
+		username = input().strip()
+		for user in config:
+			if login(user):
+				client.unfollow(username)
 	
 
 def login(userdata):
