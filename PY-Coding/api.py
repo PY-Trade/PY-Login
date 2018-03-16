@@ -18,6 +18,16 @@ headers = {
 	'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
 }
 
+class MergeRequest(object):
+	DEFAULT_TITLE = 'Merge Request'
+	DEFAULT_CONTENT = ''
+
+	def __init__(self, src_branch, dst_branch):
+		self.src_branch = src_branch
+		self.dst_branch = dst_branch
+		self.title = MergeRequest.DEFAULT_TITLE
+		self.content = MergeRequest.DEFAULT_CONTENT
+
 class Client():
 	def __init__(self):
 		self._clear()
@@ -28,6 +38,7 @@ class Client():
 		self.session.headers = headers
 		self.user_name = None
 		self.points_left = 0
+		self.id = None
 
 	def post(self, url, data):
 		response = self.session.post(url, data=data)
@@ -37,6 +48,12 @@ class Client():
 
 	def get(self, url):
 		response = self.session.get(url)
+		if response.status_code == 200:
+			self.session.headers['Referer'] = response.url
+		return response
+
+	def delete(self, url):
+		response = self.session.delete(url)
 		if response.status_code == 200:
 			self.session.headers['Referer'] = response.url
 		return response
@@ -58,6 +75,7 @@ class Client():
 			if data['code'] == 0:
 				self.user_name = data['data']['global_key']
 				self.points_left = data['data']['points_left']
+				self.id = data['data']['id']
 				return True
 			raise
 		except Exception as e:
@@ -66,22 +84,24 @@ class Client():
 	# 普通登录
 	def login(self, username, password):
 		self._clear()
-		response = self.get('https://coding.net/api/captcha/login')
+		# response = self.get('https://coding.net/api/captcha/login')
 		password = hashlib.sha1(password.encode('utf-8')).hexdigest()
 		preload = {
-			'email': username,
+			'account': username,
 			'password': password,
 			'remember_me': True,
 		}
-		response = self.post('https://coding.net/api/login', data=preload)
+		response = self.post('https://coding.net/api/v2/account/login', data=preload)
 		try:
 			data = json.loads(response.text)
 			if data['code'] == 0:
 				print('login success')
 				self.user_name = data['data']['global_key']
 				self.points_left = data['data']['points_left']
+				self.id = data['data']['id']
 				cookies_file = os.path.join(self.root_path, username + ".cookies")
 				self.save_cookies(cookies_file)
+				print('save success')
 				return True
 			elif 'msg' in data :
 				raise Exception(data['msg'])
@@ -103,3 +123,137 @@ class Client():
 			return False
 		print("cookies login success")
 		return True
+
+	def create_task(self, project, content):
+		payload = {
+			'content': content,
+			'owner_id': self.id,
+		}
+		response = self.post('https://coding.net/api/user/{}/project/{}/task'.format(self.user_name, project), data=payload)
+		# print("create_task", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return data['data']['id']
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("create_task fail", e)
+			return False
+
+	def delete_task(self, project, task_id):
+		response = self.delete('https://coding.net/api/user/{}/project/{}/task/{}'.format(self.user_name, project, task_id))
+		# print("delete_task", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return True
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("delete_task fail", e)
+			return False
+
+	def create_merge_request(self, project, request):
+		payload = {
+			'srcBranch': request.src_branch,
+			'desBranch': request.dst_branch,
+			'title': request.title,
+			'content': request.content,
+		}
+		response = self.post('https://coding.net/api/user/{}/project/{}/git/merge'.format(self.user_name, project), data=payload)
+		# print("create_merge_request", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return data['data']['merge_request']['iid']
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("create_merge_request fail", e)
+			return False
+
+	def delete_merge_request(self, project, mr_id):
+		response = self.post('https://coding.net/api/user/{}/project/{}/git/merge/{}/cancel'.format(self.user_name, project, mr_id), data=None)
+		# print("delete_merge_request", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return True
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("delete_merge_request fail", e)
+			return False
+
+	def create_push_request(self, project, branch, content):
+		response = self.get('https://coding.net/api/user/{}/project/{}/git/edit/{}%252FREADME.md'.format(self.user_name, project, branch))
+		# print("create_push_request", response.text)
+		lastCommitSha = ""
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				lastCommitSha = data['data']['lastCommit']
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("create_push_request fail", e)
+			return False
+
+		payload = {
+			'content': content,
+			'message': 'DailyPush',
+			'lastCommitSha': lastCommitSha,
+		}
+
+		response = self.post('https://coding.net/api/user/{}/project/{}/git/edit/{}%252FREADME.md'.format(self.user_name, project, branch), data=payload)
+		# print("create_push_request", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return True
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("create_push_request fail", e)
+			return False
+
+	def create_project_request(self, project):
+		payload = {
+			'type': 2,
+			'gitEnabled': 'true',
+			'gitReadmeEnabled': 'true',
+			'gitIgnore': 'no',
+			'gitLicense': 'no',
+			'vcsType': 'git',
+			'name': project,
+			'importFrom': '',
+			'members': '',
+		}
+		response = self.post('https://coding.net/api/project', data=payload)
+		# print("create_project_request", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return True
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("create_project_request fail", e)
+			return False
+
+	def create_branch_request(self, project, branch):
+		payload = {
+			'branch_name': branch,
+		}
+		response = self.post('https://coding.net/api/user/{}/project/{}/git/branches/create'.format(self.user_name, project), data=payload)
+		# print("create_branch_request", response.text)
+		try:
+			data = json.loads(response.text)
+			if data['code'] == 0:
+				return True
+			else:
+				raise Exception(data['msg'])
+		except Exception as e:
+			print("create_branch_request fail", e)
+			return False

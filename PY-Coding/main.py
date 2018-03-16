@@ -13,6 +13,7 @@ import api
 import json
 import collections
 import random
+import time
 
 client = api.Client()
 
@@ -32,7 +33,47 @@ def main():
 	# 暂无扩展功能，只有登录
 	for user in config:
 		if login(user):
-			pass
+			# 自动创建的项目名
+			project = 'mission-p'
+			# 自动创建的分支名
+			branch = 'auto-merge'
+			# 格式化时间
+			now_timestr = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()));
+			#获取当前时间
+			now = time.localtime(int(time.time()))
+			year = now.tm_year
+			month = now.tm_mon
+			day = now.tm_mday
+
+			#尝试创建项目（必要）
+			if client.create_project_request(project):
+				print('首次运行，创建项目: "{}" 成功'.format(project))
+
+			#尝试创建分支（必要）
+			if client.create_branch_request(project,branch):
+				print('首次运行，创建分支: "{}" 成功'.format(branch))
+				if client.create_push_request(project,branch,now_timestr):
+					print('首次运行，差异化分支使之可合并操作完成')
+
+			#推送代码
+			if client.create_push_request(project,branch, now_timestr):
+				print('推送代码: "{}" 成功'.format(now_timestr))
+
+			#创建任务
+			task_id = client.create_task(project, now_timestr)
+			if task_id:
+				print('任务: "{}" 操作成功'.format(task_id))
+				if client.delete_task(project, task_id):
+					print('任务: "{}" 删除成功'.format(task_id))
+
+			#创建合并请求
+			mr = api.MergeRequest(branch, 'master')
+			mr.title = now_timestr
+			mr_id = client.create_merge_request(project, mr)
+			if mr_id:
+				print('合并请求: "{}" 创建成功'.format(mr_id))
+				if client.delete_merge_request(project, mr_id):
+					print('合并请求: "{}" 删除成功'.format(mr_id))
 	
 
 def login(userdata):
